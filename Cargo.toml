@@ -1,0 +1,20 @@
+[package]
+name = "aprilasr"
+version = "0.1.0"
+authors = ["VHS <vhsdev@tutanota.com>"]
+edition = "2021"
+
+include = ["/src", "COPYING", "/examples", "makewav.sh", "README.md"]
+
+description = "High-level wrapper for the april-asr C api (libaprilasr) using aprilasr-sys."
+repository = "https://codeberg.org/vhs/aprilasr"
+keywords = ["nlp", "bindings", "wrapper", "audio", "neuralnetworks"]
+categories = ["external-ffi-bindings", "multimedia", "text-processing"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[dependencies]
+aprilasr-sys = "0.1.0"
+
+[dev-dependencies]
+md5 = "0.7.0"
