@@ -24,7 +24,8 @@
 //!
 //! ## Setup
 //!
-//! 1. Run `./makewav` to create a wavefile.
+//! 1. Run `./makewav.sh` to create a sample English wavefile.
+//! 1. Run `./getmodel.sh` to download the English April model.
 //! 1. Then run `cargo run --example sync` to run this file.
 //!
 //! ## Usage
@@ -39,8 +40,13 @@ use std::io::{self, Read};
 use std::sync::Once;
 
 /// Hard-coded path to wav file. Generate wav file by script
-/// using the wav_maker shell script in the project source.
+/// using the makewave.sh shell script in the project source.
 const WAV_FILE_PATH: &str = "mono_16bit16khz.wav";
+
+/// April model you wish to use. Download a model using the
+/// getmodel.sh shell script in the project source or using
+/// any of the download links in the April ASR documentation.
+const APRIL_MODEL_PATH: &str = "april-english-dev-01110_en.april";
 
 /// Initialize the April API with version 1 one time only.
 ///
@@ -93,7 +99,7 @@ fn main() -> Result<(), io::Error> {
     buffer.extend(vec![0; padding_samples * 2]); // PCM16 has 2 bytes per sample
 
     // Load an April ASR model from a file
-    let model = Model::new("april-english-dev-01110_en.april").unwrap();
+    let model = Model::new(APRIL_MODEL_PATH).unwrap();
 
     // Print model metadata
     println!("Model name: {}", model.name());
