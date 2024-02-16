@@ -35,10 +35,6 @@ pub static APRIL_VERSION: i32 = afi::APRIL_VERSION as c_int;
 ///
 /// Pass APRIL_VERSION as argument like so: aam_api_init(APRIL_VERSION).
 ///
-/// This function initializes the April API using the provided version. It employs the `Once`
-/// synchronization primitive from the standard library's `sync` module to guarantee that the
-/// initialization logic is executed only once, even if called concurrently by multiple threads.
-///
 /// # Safety
 /// This function should be called in a safe, single-threaded context to initialize the April API safely.
 ///
@@ -58,7 +54,19 @@ pub fn init_april_api(version: i32) {
 /// retrieval of information (name, description, language, sample rate), and destruction.
 ///
 /// # Safety
-/// Implements the [`Drop`] trait to ensure proper resource cleanup.
+/// The `Model` struct implements the [`Drop`] trait to ensure proper resource cleanup.
+///
+/// The implementation of the `Drop` trait guarantees that resources associated with the
+/// April ASR model are released correctly when a `Model` instance goes out of scope.
+///
+/// Users should ensure that all instances of `Model` are properly managed and that no
+/// references to the model are held beyond their intended lifespan to prevent resource leaks.
+///
+/// # Examples
+///
+/// Example usage of the `Model` struct can be found in the module's documentation.
+///
+/// [`Drop`]: std::ops::Drop
 #[derive(Debug)]
 pub struct Model {
     ctx: *mut afi::AprilASRModel_i,
@@ -118,6 +126,19 @@ impl Model {
     }
 }
 
+/// Implementation of the `Drop` trait for the `Model` struct.
+///
+/// The `Drop` trait defines a method named `drop` that is called when the value
+/// goes out of scope. In this implementation, it is used to release the resources
+/// associated with the April ASR model, ensuring proper cleanup.
+///
+/// # Safety
+///
+/// The `afi::aam_free` function is marked as `unsafe` because it deals with raw
+/// pointers and memory management. The implementation assumes that the
+/// `aprilasr_sys` crate provides a safe and correct way to free the resources
+/// associated with the ASR model. Incorrect usage of this function or invalid
+/// pointers may result in undefined behavior.
 impl Drop for Model {
     /// Drops the April ASR model, releasing associated resources.
     fn drop(&mut self) {
@@ -773,7 +794,8 @@ pub extern "C" fn handler_cb_wrapper(
 /// This ensures that the `Model` is not deallocated before the associated `Session` instances are closed. The ownership
 /// and lifecycle management of the `Model` are abstracted away, providing a safe way to share the model among multiple sessions.
 ///
-/// Users of this struct should exercise caution and adhere to the safety guidelines and documentation provided by the April ASR library.
+/// Users should ensure that all instances of `Session` are properly managed and that no
+/// references to the session are held beyond their intended lifespan to prevent resource leaks.
 ///
 /// # Examples
 ///
