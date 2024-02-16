@@ -1,6 +1,6 @@
 [package]
 name = "aprilasr"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["VHS <vhsdev@tutanota.com>"]
 edition = "2021"
 
