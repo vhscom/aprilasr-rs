@@ -42,6 +42,7 @@ use std::sync::Once;
 /// Hard-coded path to wav file. Generate wav file by script
 /// using the makewave.sh shell script in the project source.
 const WAV_FILE_PATH: &str = "mono_16bit16khz.wav";
+// const WAV_FILE_PATH: &str = "fullaudios/full11.wav";
 
 /// April model you wish to use. Download a model using the
 /// getmodel.sh shell script in the project source or using
@@ -92,11 +93,14 @@ fn main() -> Result<(), io::Error> {
 
     // Read the entire contents of the WAV file into a buffer
     let mut buffer = Vec::new();
+    let mut buffer2 = Vec::new();
     File::open(WAV_FILE_PATH)?.read_to_end(&mut buffer)?;
+    File::open(WAV_FILE_PATH)?.read_to_end(&mut buffer2)?;
 
     // Add 1 second of padding (16,000 samples for 16kHz audio)
     let padding_samples = 40800; // 2.55s
     buffer.extend(vec![0; padding_samples * 2]); // PCM16 has 2 bytes per sample
+    buffer2.extend(vec![0; padding_samples * 2]);
 
     // Load an April ASR model from a file
     let model = Model::new(APRIL_MODEL_PATH).unwrap();
@@ -108,10 +112,21 @@ fn main() -> Result<(), io::Error> {
     println!("Model samplerate: {}", model.sample_rate());
 
     println!();
+    println!("Feeding wavefile into Session 1:");
+    println!();
 
     if let Ok(session) = Session::new(&model, example_handler, false, true) {
         // Feed PCM16 audio data to the session
         session.feed_pcm16(buffer);
+    }
+
+    println!();
+    println!("Feeding wavefile into Session 2:");
+    println!();
+
+    if let Ok(session2) = Session::new(&model, example_handler, false, true) {
+        // Feed PCM16 audio data to the session
+        session2.feed_pcm16(buffer2);
     }
 
     println!();

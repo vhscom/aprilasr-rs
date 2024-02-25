@@ -23,7 +23,6 @@
 use aprilasr_sys::ffi as afi;
 use std::ffi::{c_char, c_float, c_int, CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::Arc;
 use std::{fmt, mem, process, slice};
 
 /// Exposes the April API version as defined by the FFI cast to `i32`.
@@ -790,9 +789,9 @@ pub extern "C" fn handler_cb_wrapper(
 /// to ensure that the associated resources are properly managed and that the session is used safely within the constraints
 /// of the April ASR library.
 ///
-/// The `Session` also holds a reference to the `Model` using an [`Arc`] (Atomic Reference Counting) smart pointer.
-/// This ensures that the `Model` is not deallocated before the associated `Session` instances are closed. The ownership
-/// and lifecycle management of the `Model` are abstracted away, providing a safe way to share the model among multiple sessions.
+/// The `Session` also holds a reference to the `Model` using a simple reference (`&'a Model`). This ensures that the `Model`
+/// is not deallocated before the associated `Session` instances are closed. The ownership and lifecycle management of the `Model`
+/// are abstracted away, providing a safe way to share the model among multiple sessions.
 ///
 /// Users should ensure that all instances of `Session` are properly managed and that no
 /// references to the session are held beyond their intended lifespan to prevent resource leaks.
@@ -802,15 +801,14 @@ pub extern "C" fn handler_cb_wrapper(
 /// Example usage of the `Session` struct can be found in the module's documentation.
 ///
 /// [`Drop`]: std::ops::Drop
-/// [`Arc`]: std::sync::Arc
 #[derive(Debug)]
-pub struct Session {
+pub struct Session<'a> {
     ctx: *mut afi::AprilASRSession_i,
-    // Hold onto the model so it won't be freed
-    _model: Arc<Model>,
+    // Hold onto the model reference
+    _model: &'a Model,
 }
 
-impl Session {
+impl<'a> Session<'a> {
     /// Initializes a new ASR session with the specified ASR model and configuration.
     ///
     /// # Safety
@@ -842,7 +840,7 @@ impl Session {
     /// [`Arc`]: std::sync::Arc
     /// [`Model`]: struct.Model.html
     pub fn new(
-        model: Model,
+        model: &'a Model,
         callback: fn(result: ResultType) -> (),
         asynchronous: bool,
         no_rt: bool,
@@ -967,7 +965,7 @@ impl Session {
 /// `aprilasr_sys` crate provides a safe and correct way to free the resources
 /// associated with the ASR session. Incorrect usage of this function or invalid
 /// pointers may result in undefined behavior.
-impl Drop for Session {
+impl<'a> Drop for Session<'a> {
     fn drop(&mut self) {
         unsafe {
             afi::aas_free(self.ctx);
@@ -1282,8 +1280,10 @@ mod tests {
     fn wraps_session() {
         init_april_api(APRIL_VERSION);
 
+        let model = Model::new("april-english-dev-01110_en.april").unwrap();
+
         let session = Session::new(
-            Model::new("april-english-dev-01110_en.april").unwrap(),
+            &model,
             |result_type| println!("{:?}", result_type),
             true,
             true,
@@ -1303,7 +1303,7 @@ mod tests {
         let asynchronous = true;
         let no_rt = true;
         let callback = |result_type| println!("{:?}", result_type);
-        let session = Session::new(model, callback, asynchronous, no_rt).unwrap();
+        let session = Session::new(&model, callback, asynchronous, no_rt).unwrap();
 
         let empty_vec: Vec<u8> = Vec::new();
         session.feed_pcm16(empty_vec);
@@ -1319,7 +1319,7 @@ mod tests {
         let asynchronous = true;
         let no_rt = true;
         let callback = |result_type| println!("{:?}", result_type);
-        let session = Session::new(model, callback, asynchronous, no_rt).unwrap();
+        let session = Session::new(&model, callback, asynchronous, no_rt).unwrap();
 
         // Sessions must be fed before being flushed
         let empty_vec: Vec<u8> = Vec::new();
@@ -1337,7 +1337,7 @@ mod tests {
         let asynchronous = true;
         let no_rt = true;
         let callback = |result_type| println!("{:?}", result_type);
-        let session = Session::new(model, callback, asynchronous, no_rt).unwrap();
+        let session = Session::new(&model, callback, asynchronous, no_rt).unwrap();
 
         // Expects ConfigFlagBits::AsyncRealtime (asynchronyous=true, no_rt=false)
         let speedup = session.realtime_get_speedup();
@@ -1345,5 +1345,18 @@ mod tests {
         assert_eq!(speedup, 1.0);
 
         // Drop traits automatically free session and model memory.
+    }
+
+    #[test]
+    fn test_sessions_can_share_model() {
+        init_april_api(APRIL_VERSION);
+
+        let model = Model::new("april-english-dev-01110_en.april").unwrap();
+        let asynchronous = true;
+        let no_rt = true;
+        let callback = |result_type| println!("{:?}", result_type);
+
+        let _ = Session::new(&model, callback, asynchronous, no_rt).unwrap();
+        let _ = Session::new(&model, callback, asynchronous, no_rt).unwrap();
     }
 }

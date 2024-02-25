@@ -164,7 +164,7 @@ fn main() -> Result<(), io::Error> {
     let model_sample_rate = model.sample_rate();
 
     println!();
-    if let Ok(session) = Session::new(model, example_handler, true, true) {
+    if let Ok(session) = Session::new(&model, example_handler, true, true) {
         let file = File::open(WAV_FILE_PATH)?;
         let mut buf_reader = BufReader::new(file);
 
