@@ -1,10 +1,18 @@
 [package]
 name = "aprilasr"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["VHS <vhsdev@tutanota.com>"]
 edition = "2021"
 
-include = ["/src", "COPYING", "/examples", "makewav.sh", "README.md"]
+include = [
+    "/examples",
+    "/src",
+    "CHANGELOG.md",
+    "COPYING",
+    "README.md",
+    "getmodel.sh",
+    "makewav.sh",
+]
 
 description = "High-level wrapper for the april-asr C api (libaprilasr) using aprilasr-sys."
 repository = "https://codeberg.org/vhs/aprilasr-rs"
