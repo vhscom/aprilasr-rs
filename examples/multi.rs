@@ -26,7 +26,7 @@
 //!
 //! 1. Run `./makewav.sh` to create a sample English wavefile.
 //! 1. Run `./getmodel.sh` to download the English April model.
-//! 1. Then run `cargo run --example sync` to run this file.
+//! 1. Then run `cargo run --example multi` to run this file.
 //!
 //! ## Usage
 //!
