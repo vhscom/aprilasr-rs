@@ -67,22 +67,10 @@ impl From<afi::AprilConfigFlagBits> for ConfigFlagBits {
     }
 }
 
-/// Implements the `Into` trait for converting `ConfigFlagBits` into the low-level FFI representation `afi::AprilConfigFlagBits`.
-///
-/// This `Into` implementation enables seamless conversion from the Rust-friendly `ConfigFlagBits` enum
-/// to its corresponding low-level FFI representation used by `afi::AprilConfigFlagBits`.
-impl Into<afi::AprilConfigFlagBits> for ConfigFlagBits {
-    /// Converts a `ConfigFlagBits` enum into its low-level FFI representation (`afi::AprilConfigFlagBits`).
-    ///
-    /// # Arguments
-    ///
-    /// * `self` - The Rust-friendly `ConfigFlagBits` enum to be converted.
-    ///
-    /// # Returns
-    ///
-    /// The low-level FFI representation of `ConfigFlagBits` as `afi::AprilConfigFlagBits`.
-    fn into(self) -> afi::AprilConfigFlagBits {
-        self as afi::AprilConfigFlagBits
+/// Provides a conversion from [`ConfigFlagBits`] to the low-level FFI representation [`afi::AprilConfigFlagBits`].
+impl From<ConfigFlagBits> for afi::AprilConfigFlagBits {
+    fn from(val: ConfigFlagBits) -> Self {
+        val as afi::AprilConfigFlagBits
     }
 }
 
@@ -115,6 +103,7 @@ impl Into<afi::AprilConfigFlagBits> for ConfigFlagBits {
 ///
 /// Creating a `Config` instance assumes that the provided values in the `afi::AprilConfig` are valid
 /// and properly initialized. Incorrect or uninitialized values may lead to undefined behavior.
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(PartialEq, Debug)]
 pub struct Config {
     speaker: SpeakerID,
@@ -213,40 +202,24 @@ impl From<afi::AprilConfig> for Config {
     /// Panics if the creation of `Config` fails. This typically occurs when the provided
     /// `afi::AprilConfig` values result in an invalid configuration.
     fn from(cfg: afi::AprilConfig) -> Self {
-        // Extract values from the FFI representation and convert them into the corresponding Rust types
-        let speaker = SpeakerID::from(cfg.speaker);
-        let handler = cfg.handler;
-        let userdata = cfg.userdata;
-        let flags = ConfigFlagBits::from(cfg.flags);
-
-        // Attempt to create a new Config instance, panicking if the creation fails
-        Config::new(speaker, handler, userdata, flags)
-            .unwrap_or_else(|err| panic!("Failed to create Config: {}", err))
+        Config::new(
+            SpeakerID::from(cfg.speaker),
+            cfg.handler,
+            cfg.userdata,
+            ConfigFlagBits::from(cfg.flags),
+        )
+        .unwrap_or_else(|err| panic!("Failed to create Config: {}", err))
     }
 }
 
-/// Conversion from the Rust-friendly `Config` to the low-level FFI representation (`afi::AprilConfig`).
-///
-/// This implementation enables the creation of a `afi::AprilConfig` instance based on the Rust-friendly `Config`.
-impl Into<afi::AprilConfig> for Config {
-    /// Converts a `Config` into a `afi::AprilConfig` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `config` - The Rust-friendly `Config` to be converted into low-level FFI representation.
-    fn into(self) -> afi::AprilConfig {
-        // Convert Rust types into the corresponding FFI representation
-        let speaker = self.speaker.into();
-        let handler = self.handler;
-        let userdata = self.userdata;
-        let flags = self.flags.into();
-
-        // Create a new afi::AprilConfig instance
+/// Provides a conversion from [`Config`] to the low-level FFI representation [`afi::AprilConfig`].
+impl From<Config> for afi::AprilConfig {
+    fn from(config: Config) -> Self {
         afi::AprilConfig {
-            speaker,
-            handler,
-            userdata,
-            flags,
+            speaker: config.speaker.into(),
+            handler: config.handler,
+            userdata: config.userdata,
+            flags: config.flags.into(),
         }
     }
 }

@@ -98,7 +98,6 @@ impl From<afi::AprilTokenFlagBits> for TokenFlagBits {
 ///
 /// [`Token`]: enum.Token.html
 #[derive(Debug, Clone)]
-#[repr(i32)]
 pub enum ResultType {
     /// Specifies that the result is unknown.
     Unknown,
@@ -174,32 +173,14 @@ impl Token {
     ///
     /// # Safety
     ///
-    /// This function assumes that the provided `token` pointer is valid and points to a
-    /// null-terminated C string. It also assumes that the `flags` parameter is a valid
-    /// representation of `afi::AprilTokenFlagBits`. The user should ensure that the input
-    /// parameters adhere to these assumptions to prevent undefined behavior.
-    ///
-    /// The `token` parameter is a C string pointer representing the recognition result token.
-    ///
-    /// The `logprob` parameter is the log probability of this token being the correct token.
-    ///
-    /// The `flags` parameter represents the flag bits associated with the token,
-    /// and it should be a valid variant of [`TokenFlagBits`](enum.TokenFlagBits.html).
-    ///
-    /// The `time_ms` parameter denotes the millisecond at which this token was emitted.
-    ///
-    /// # Returns
-    ///
-    /// Returns a result containing a newly constructed `Token` instance if the
-    /// instantiation is successful. If there are errors during the instantiation,
-    /// such as invalid flag values, it returns a boxed error implementing the `Error` trait.
-    pub fn new(
+    /// `token` must be a valid, non-null pointer to a null-terminated C string.
+    pub unsafe fn new(
         token: *const c_char,
         logprob: c_float,
         flags: afi::AprilTokenFlagBits,
         time_ms: usize,
     ) -> Result<Token, Box<dyn std::error::Error>> {
-        let token_cstr = unsafe { CStr::from_ptr(token) };
+        let token_cstr = CStr::from_ptr(token);
         let rust_token = String::from_utf8_lossy(token_cstr.to_bytes()).to_string();
         let rust_flags = TokenFlagBits::from(flags);
 
@@ -215,8 +196,8 @@ impl Token {
     ///
     /// The returned string contains its own formatting, which may denote the start of
     /// a new word or the next part of a word.
-    pub fn token(&self) -> String {
-        self.token.clone()
+    pub fn token(&self) -> &str {
+        &self.token
     }
 
     /// Returns the log probability of this being the correct token.
@@ -246,7 +227,8 @@ impl Token {
 /// Bear in mind that implementing the `From` trait automatically provides the `Into` trait.
 impl From<afi::AprilToken> for Token {
     fn from(t: afi::AprilToken) -> Self {
-        Token::new(t.token, t.logprob, t.flags, t.time_ms)
+        // SAFETY: t.token is a valid C string pointer provided by the april-asr library.
+        unsafe { Token::new(t.token, t.logprob, t.flags, t.time_ms) }
             .unwrap_or_else(|err| panic!("Failed to create Token: {}", err))
     }
 }
@@ -315,59 +297,20 @@ mod tests {
 
     #[test]
     fn wraps_result_tokens() {
-        let result = Token::new(
-            b" BATMAN\0".as_ptr(),
-            8.73,
-            afi::AprilTokenFlagBits_APRIL_TOKEN_FLAG_WORD_BOUNDARY_BIT,
-            1705461067638,
-        )
+        let result = unsafe {
+            Token::new(
+                b" BATMAN\0".as_ptr().cast(),
+                8.73,
+                afi::AprilTokenFlagBits_APRIL_TOKEN_FLAG_WORD_BOUNDARY_BIT,
+                1705461067638,
+            )
+        }
         .unwrap();
 
         assert_eq!(result.token(), " BATMAN");
         assert_eq!(result.logprob(), 8.73);
         assert_eq!(result.flags(), TokenFlagBits::WordBoundary);
         assert_eq!(result.time_ms(), 1705461067638);
-
-        // Do needless things to demonstrate ways to do useful things.
-        let mut logprobs = vec![8.73, 4.62, 9.51];
-        logprobs.resize_with(5, Default::default);
-        assert_eq!(logprobs, [8.73, 4.62, 9.51, 0., 0.]);
-
-        // Do needless things to demonstrate ways to do useful things.
-        let mut flag_bits = vec![
-            TokenFlagBits::WordBoundary,
-            TokenFlagBits::WordBoundary,
-            TokenFlagBits::SentenceEnd,
-        ];
-        flag_bits.resize_with(5, || TokenFlagBits::WordBoundary);
-        assert_eq!(
-            flag_bits.last().unwrap().clone(),
-            TokenFlagBits::WordBoundary
-        );
-
-        let another_result = Token {
-            token: String::from(" AND"),
-            logprob: logprobs[0],
-            flags: flag_bits.last().unwrap().clone(),
-            time_ms: result.time_ms() + 320,
-        };
-
-        assert_eq!(another_result.token(), " AND");
-        assert_eq!(another_result.logprob(), 8.73);
-        assert_eq!(another_result.flags(), TokenFlagBits::WordBoundary);
-        assert_eq!(another_result.time_ms(), 1705461067958);
-
-        let last_result = Token {
-            token: String::from(" ROBIN"),
-            logprob: logprobs[2],
-            flags: TokenFlagBits::SentenceEnd,
-            time_ms: another_result.time_ms() + 230,
-        };
-
-        assert_eq!(last_result.token(), " ROBIN");
-        assert_eq!(last_result.logprob(), 9.51);
-        assert_eq!(last_result.flags(), TokenFlagBits::SentenceEnd);
-        assert_eq!(last_result.time_ms(), 1705461068188);
     }
 
     #[test]
@@ -377,7 +320,7 @@ mod tests {
         let valid_flags = afi::AprilTokenFlagBits_APRIL_TOKEN_FLAG_WORD_BOUNDARY_BIT;
         let time_ms = 100;
 
-        match Token::new(valid_token.as_ptr(), logprob, valid_flags, time_ms) {
+        match unsafe { Token::new(valid_token.as_ptr(), logprob, valid_flags, time_ms) } {
             Ok(april_token) => {
                 assert_eq!(april_token.token, "example_token");
                 assert_eq!(april_token.logprob, 0.5);

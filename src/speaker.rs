@@ -67,18 +67,14 @@ impl Default for SpeakerID {
 /// Incorrect or uninitialized values may lead to undefined behavior.
 impl From<afi::AprilSpeakerID> for SpeakerID {
     fn from(t: afi::AprilSpeakerID) -> Self {
-        // Assuming a straightforward conversion is possible
         SpeakerID { data: t.data }
     }
 }
 
-/// Implements the `Into` trait for converting `SpeakerID` into the low-level FFI representation `afi::AprilSpeakerID`.
-///
-/// This `Into` implementation allows seamless conversion of a Rust-friendly `SpeakerID` into the corresponding
-/// low-level FFI representation used by `afi::AprilSpeakerID`.
-impl Into<afi::AprilSpeakerID> for SpeakerID {
-    fn into(self) -> afi::AprilSpeakerID {
-        afi::AprilSpeakerID { data: self.data }
+/// Provides a conversion from [`SpeakerID`] to the low-level FFI representation [`afi::AprilSpeakerID`].
+impl From<SpeakerID> for afi::AprilSpeakerID {
+    fn from(val: SpeakerID) -> Self {
+        afi::AprilSpeakerID { data: val.data }
     }
 }
 
@@ -90,43 +86,19 @@ mod tests {
 
     #[test]
     fn provides_speaker_interface() {
-        // This is a UTF-16LE encoding. The first two bytes 0xAB and 0xCD represent
-        // the byte order mark for little-endian UTF-16 (BOM). The remaining bytes
-        // are the encoded text as UTF-16LE characters, which are 2-byte code units
-        // that consist of a high surrogate followed by a low surrogate.
         let encoded = [
             0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56, 0x78, 0x90, 0xBA, 0xDC, 0xFE, 0x1A, 0x2B, 0x3C,
             0x4D, 0x5E,
         ];
 
-        #[allow(unused_mut)]
-        let mut max_speakers = SpeakerID { data: encoded };
-        assert_eq!(max_speakers.data.len(), 16);
+        let speaker = SpeakerID { data: encoded };
+        assert_eq!(speaker.data.len(), 16);
 
-        // Do needless things to demonstrate ways to do useful things.
-        let cyphertext_speakers = vec![
-            "3e6e450acf34e9f3333bfdadb516e533", // echo Jane | md5sum
-            "0f36f95c7f1ddfc81ea827400c4a7c2c", // echo John | md5sum
-            "2fc1c0beb992cd7096975cfebf9d5c3b", // echo Bob | md5sum
-        ];
-        let search_value = cyphertext_speakers[1];
-        match cyphertext_speakers
-            .iter()
-            .position(|name| name == &"61409aa1fd47d4a5332de23cbf59a36f")
-        {
-            Some(index) => println!("Found {} at index {}", search_value, index),
-            None => println!("{} not found in list", search_value),
-        };
+        let default_speaker = SpeakerID::default();
+        assert_eq!(default_speaker.data, [0; 16]);
 
-        // Do needless things to demonstrate ways to do useful things.
-        let speakers = vec!["Jane", "John", "Bob"];
-        let mut speaker_ids = Vec::new();
-        for speaker in speakers {
-            println!("Encrypting {}", speaker);
-            let hash = compute(speaker);
-            let id = SpeakerID { data: hash.0 };
-            speaker_ids.push(id);
-            println!("Added new speaker with hash {:?}", hash);
-        }
+        let hash = compute("Jane");
+        let hashed_speaker = SpeakerID { data: hash.0 };
+        assert_ne!(hashed_speaker.data, [0; 16]);
     }
 }

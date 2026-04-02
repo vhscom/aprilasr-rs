@@ -42,7 +42,6 @@ use std::sync::Once;
 /// Hard-coded path to wav file. Generate wav file by script
 /// using the makewave.sh shell script in the project source.
 const WAV_FILE_PATH: &str = "mono_16bit16khz.wav";
-// const WAV_FILE_PATH: &str = "fullaudios/full11.wav";
 
 /// April model you wish to use. Download a model using the
 /// getmodel.sh shell script in the project source or using
@@ -84,7 +83,7 @@ fn example_handler(result_type: ResultType) {
 ///
 /// A `String` containing the concatenated textual representations of the tokens.
 fn tokens_to_string(tokens: Vec<Token>) -> String {
-    tokens.iter().map(|t| t.token().clone()).collect()
+    tokens.iter().map(|t| t.token()).collect()
 }
 
 /// Main function demonstrating basic usage of the April ASR library.
@@ -117,7 +116,7 @@ fn main() -> Result<(), io::Error> {
 
     if let Ok(session) = Session::new(&model, example_handler, false, true) {
         // Feed PCM16 audio data to the session
-        session.feed_pcm16(buffer);
+        session.feed_pcm16(&buffer);
     }
 
     println!();
@@ -126,7 +125,7 @@ fn main() -> Result<(), io::Error> {
 
     if let Ok(session2) = Session::new(&model, example_handler, false, true) {
         // Feed PCM16 audio data to the session
-        session2.feed_pcm16(buffer2);
+        session2.feed_pcm16(&buffer2);
     }
 
     println!();

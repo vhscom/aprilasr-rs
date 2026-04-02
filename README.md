@@ -20,7 +20,7 @@ fn main() {
         &model, callback, asynchronous, no_rt
     ).unwrap();
 
-    session.feed_pcm16(vec![]);
+    session.feed_pcm16(&[]);
 }
 ```
 

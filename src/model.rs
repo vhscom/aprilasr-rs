@@ -129,7 +129,8 @@ impl Drop for Model {
 #[cfg(test)]
 mod tests {
     use crate::{init_april_api, APRIL_VERSION};
-    use std::{ffi::CStr, ffi::CString, ptr::null_mut};
+    use std::ffi::{CStr, CString};
+    use std::ptr::null_mut;
 
     use super::*;
 
@@ -137,48 +138,34 @@ mod tests {
     fn can_load_model() {
         init_april_api(APRIL_VERSION);
 
-        let path = "april-english-dev-01110_en.april";
-        let path_str = CString::new(path).expect("CString::new failed");
+        let path_str = CString::new("april-english-dev-01110_en.april").expect("CString::new failed");
         let model = unsafe { afi::aam_create_model(path_str.as_ptr()) };
         assert_ne!(model, null_mut());
 
-        let result = unsafe {
+        let description = unsafe {
             CStr::from_ptr(afi::aam_get_description(model))
                 .to_string_lossy()
                 .to_string()
         };
-        assert_eq!(result, "Punctuation + Numbers 23a3");
+        assert_eq!(description, "Punctuation + Numbers 23a3");
 
-        // Do needless things to demonstrate ways to do useful things.
-        let result = unsafe { CStr::from_ptr(afi::aam_get_description(model)).to_str() };
-        assert_eq!(result, Ok("Punctuation + Numbers 23a3"));
+        let name = unsafe {
+            CStr::from_ptr(afi::aam_get_name(model))
+                .to_string_lossy()
+                .to_string()
+        };
+        assert_eq!(name, "April English Dev-01110");
 
-        // Do needless things to demonstrate ways to do useful things.
-        let c_str = unsafe { CStr::from_ptr(afi::aam_get_description(model)) };
-        assert_eq!(c_str.to_bytes_with_nul(), b"Punctuation + Numbers 23a3\0");
+        let language = unsafe {
+            CStr::from_ptr(afi::aam_get_language(model))
+                .to_string_lossy()
+                .to_string()
+        };
+        assert_eq!(language, "en");
 
-        // Do needless things to demonstrate ways to do useful things.
-        let c_str = unsafe { CStr::from_ptr(afi::aam_get_description(model)) };
-        let rust_str = c_str.to_str().expect("Bad encoding");
-        let owned = rust_str.to_owned(); // Take ownership of the string
-        assert_eq!(c_str.to_bytes_with_nul(), b"Punctuation + Numbers 23a3\0");
-
-        let char_ptr = unsafe { afi::aam_get_name(model) };
-        let c_str = unsafe { CStr::from_ptr(char_ptr) };
-        let result = c_str.to_string_lossy().to_string();
-        assert_eq!(result, "April English Dev-01110");
-
-        let byte_slice = unsafe { CStr::from_ptr(afi::aam_get_language(model)).to_bytes() };
-        let result = unsafe { String::from_utf8_unchecked(byte_slice.to_vec()).to_string() };
-        assert_eq!(result, "en");
-
-        let result = unsafe { afi::aam_get_sample_rate(model) };
-        assert_eq!(result, 16000);
+        assert_eq!(unsafe { afi::aam_get_sample_rate(model) }, 16000);
 
         unsafe { afi::aam_free(model) }
-
-        assert_eq!(owned.as_str(), "Punctuation + Numbers 23a3"); // Assert retained ownership
-        assert_ne!(rust_str, "Punctuation + Numbers 23a3"); // Assert lost ownership
     }
 
     #[test]
@@ -188,13 +175,6 @@ mod tests {
         let path_str = CString::new("invalid.april").expect("CString::new failed");
         let model = unsafe { afi::aam_create_model(path_str.as_ptr()) };
         assert_eq!(model, null_mut());
-
-        // Do needless things to demonstrate ways to do useful things.
-        let path_ptr = CString::new("invalid.april").unwrap().into_raw();
-        let model = unsafe { afi::aam_create_model(path_ptr) };
-        let _ = unsafe { CString::from_raw(path_ptr) };
-
-        unsafe { afi::aam_free(model) }
     }
 
     #[test]

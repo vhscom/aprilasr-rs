@@ -81,8 +81,7 @@ fn example_handler(result_type: ResultType) {
 }
 
 fn tokens_to_string(tokens: Vec<Token>) -> String {
-    let tokens_str: Vec<String> = tokens.iter().map(|t| (*t).token()).collect();
-    tokens_str.join("")
+    tokens.iter().map(|t| t.token()).collect()
 }
 
 #[derive(Debug)]
@@ -184,7 +183,7 @@ fn main() -> Result<(), io::Error> {
             }
 
             // Feed PCM16 audio data to the session
-            session.feed_pcm16(buffer);
+            session.feed_pcm16(&buffer);
             thread::sleep(Duration::from_millis(100));
         }
 

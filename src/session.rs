@@ -66,9 +66,8 @@ impl<'a> Session<'a> {
     /// `aas_create_session` function. Incorrect usage or invalid parameters may result in
     /// undefined behavior.
     ///
-    /// Additionally, this function internally uses [`Arc`] (Atomic Reference Counting) to ensure that
-    /// the provided [`Model`] is not dropped before the associated `Session` instances are closed.
-    /// This guarantees that the `Model` remains valid for the duration of the `Session`.
+    /// The `Session` holds a borrowed reference to the provided [`Model`], ensuring
+    /// the model is not dropped before the associated `Session` instances are closed.
     ///
     /// # Arguments
     ///
@@ -76,25 +75,16 @@ impl<'a> Session<'a> {
     /// * `callback` - A callback function to handle the result of the ASR session asynchronously.
     /// * `asynchronous` - A flag indicating whether the ASR session should run asynchronously.
     /// * `no_rt` - A flag indicating whether real-time processing should be disabled.
-    /// * `speaker_name` - (Currently commented out) The name of the speaker associated with the session.
     ///
     /// # Returns
     ///
     /// Returns a `Result` containing either the newly created `Session` instance or an error message.
-    ///
-    /// # Examples
-    ///
-    /// Example usage of the `new` function can be found in the module's documentation.
-    ///
-    /// [`Arc`]: std::sync::Arc
-    /// [`Model`]: struct.Model.html
     pub fn new(
         model: &'a Model,
         callback: fn(result: ResultType) -> (),
         asynchronous: bool,
         no_rt: bool,
-        // speaker_name: &str,
-    ) -> Result<Session, Box<dyn std::error::Error>> {
+    ) -> Result<Session<'a>, Box<dyn std::error::Error>> {
         let mut config_builder = ConfigBuilder::new();
 
         config_builder.flags(match (asynchronous, no_rt) {
@@ -114,7 +104,7 @@ impl<'a> Session<'a> {
         } else {
             Ok(Session {
                 ctx: session,
-                _model: model.into(),
+                _model: model,
             })
         }
     }
@@ -128,26 +118,6 @@ impl<'a> Session<'a> {
     /// invalid parameters may lead to undefined behavior.
     pub fn flush(&self) {
         unsafe { afi::aas_flush(self.ctx) };
-    }
-
-    /// Frees the ASR session, saving state to a file if `AprilSpeakerID` was supplied.
-    ///
-    /// This function calls the `aas_free` function to free the ASR session. It must be called
-    /// for all sessions before freeing the model. If an unwinding panic occurs during the free
-    /// attempt, the error is caught, and the session is still considered successfully freed.
-    /// The error information is printed to the standard error stream.
-    ///
-    /// # Safety
-    ///
-    /// The safety of this function depends on the correctness of the `aas_free` function
-    /// from the underlying FFI (Foreign Function Interface) library. Incorrect usage or
-    /// invalid parameters may lead to undefined behavior.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the `Session` instance after freeing or an error message.
-    pub fn free(&self) {
-        unsafe { afi::aas_free(self.ctx) };
     }
 
     /// Feed PCM16 audio samples to the session.
@@ -169,14 +139,11 @@ impl<'a> Session<'a> {
     /// obtained from `aam_get_sample_rate`.
     ///
     /// Note: `short_count` in the `aas_feed_pcm16` call represents the number of shorts, not bytes.
-    pub fn feed_pcm16(&self, pcm16_bytes: Vec<u8>) {
-        // Convert bytes to i16 samples with a step size of 1
+    pub fn feed_pcm16(&self, pcm16_bytes: &[u8]) {
         let mut audio_samples: Vec<i16> = pcm16_bytes
             .chunks_exact(2)
-            .map(|bytes| i16::from_ne_bytes([bytes[0], bytes[1]]))
+            .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]))
             .collect();
-
-        // Feed PCM16 audio data to the session.
         unsafe { afi::aas_feed_pcm16(self.ctx, audio_samples.as_mut_ptr(), audio_samples.len()) };
     }
 
@@ -257,8 +224,7 @@ mod tests {
         let callback = |result_type| println!("{:?}", result_type);
         let session = Session::new(&model, callback, asynchronous, no_rt).unwrap();
 
-        let empty_vec: Vec<u8> = Vec::new();
-        session.feed_pcm16(empty_vec);
+        session.feed_pcm16(&[]);
 
         // Drop traits automatically free session and model memory.
     }
@@ -274,8 +240,7 @@ mod tests {
         let session = Session::new(&model, callback, asynchronous, no_rt).unwrap();
 
         // Sessions must be fed before being flushed
-        let empty_vec: Vec<u8> = Vec::new();
-        session.feed_pcm16(empty_vec);
+        session.feed_pcm16(&[]);
         session.flush();
 
         // Drop traits automatically free session and model memory.

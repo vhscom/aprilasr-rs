@@ -83,7 +83,7 @@ fn example_handler(result_type: ResultType) {
 ///
 /// A `String` containing the concatenated textual representations of the tokens.
 fn tokens_to_string(tokens: Vec<Token>) -> String {
-    tokens.iter().map(|t| t.token().clone()).collect()
+    tokens.iter().map(|t| t.token()).collect()
 }
 
 /// Main function demonstrating basic usage of the April ASR library.
@@ -111,7 +111,7 @@ fn main() -> Result<(), io::Error> {
 
     if let Ok(session) = Session::new(&model, example_handler, false, true) {
         // Feed PCM16 audio data to the session
-        session.feed_pcm16(buffer);
+        session.feed_pcm16(&buffer);
     }
 
     println!();
