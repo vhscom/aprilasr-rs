@@ -16,9 +16,9 @@ include = [
 
 description = "High-level wrapper for the april-asr C api (libaprilasr) using aprilasr-sys."
 repository = "https://codeberg.org/vhs/aprilasr-rs"
-keywords = ["nlp", "bindings", "wrapper", "audio", "neuralnetworks"]
+keywords = ["nlp", "ffi", "speech-recognition", "audio", "asr"]
 categories = ["external-ffi-bindings", "multimedia", "text-processing"]
-license = "GPL-3.0"
+license = "GPL-3.0-or-later"
 readme = "README.md"
 
 [dependencies]
