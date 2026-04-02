@@ -22,7 +22,7 @@ license = "GPL-3.0"
 readme = "README.md"
 
 [dependencies]
-aprilasr-sys = "0.1.0"
+aprilasr-sys = "0.1.4"
 
 [dev-dependencies]
 md5 = "0.7.0"
