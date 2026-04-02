@@ -118,30 +118,18 @@ pub struct Config {
 
 impl Config {
     /// Creates a new configuration with the provided parameters.
-    ///
-    /// # Arguments
-    ///
-    /// - `speaker`: Unique identifier for the speaker.
-    /// - `handler`: The handler to be called on recognition events.
-    /// - `userdata`: User-specific data associated with the configuration.
-    /// - `flags`: Configuration flags.
-    ///
-    /// # Returns
-    ///
-    /// Result containing a new `Config` instance with the specified parameters,
-    /// or an error if any of the required parameters are missing.
     pub fn new(
         speaker: SpeakerID,
         handler: afi::AprilRecognitionResultHandler,
         userdata: *mut ::std::os::raw::c_void,
         flags: ConfigFlagBits,
-    ) -> Result<Config, Box<dyn std::error::Error>> {
-        Ok(Config {
+    ) -> Config {
+        Config {
             speaker,
             handler,
             userdata,
             flags,
-        })
+        }
     }
 
     /// Gets the speaker identifier.
@@ -208,7 +196,6 @@ impl From<afi::AprilConfig> for Config {
             cfg.userdata,
             ConfigFlagBits::from(cfg.flags),
         )
-        .unwrap_or_else(|err| panic!("Failed to create Config: {}", err))
     }
 }
 
@@ -229,60 +216,50 @@ impl From<Config> for afi::AprilConfig {
 /// This builder pattern is designed to offer ergonomic and efficient configuration creation
 /// by using mutable references.
 pub struct ConfigBuilder {
-    speaker: Option<SpeakerID>,
-    handler: Option<afi::AprilRecognitionResultHandler>,
-    userdata: Option<*mut ::std::os::raw::c_void>,
-    flags: Option<ConfigFlagBits>,
+    speaker: SpeakerID,
+    handler: afi::AprilRecognitionResultHandler,
+    userdata: *mut ::std::os::raw::c_void,
+    flags: ConfigFlagBits,
 }
 
 impl ConfigBuilder {
     /// Creates a new `ConfigBuilder` with default values.
     pub fn new() -> Self {
         Self {
-            speaker: Some(SpeakerID::default()),
-            handler: Some(afi::AprilRecognitionResultHandler::default()),
-            userdata: Some(::std::ptr::null_mut()),
-            flags: Some(ConfigFlagBits::AsyncNoRealtime),
+            speaker: SpeakerID::default(),
+            handler: afi::AprilRecognitionResultHandler::default(),
+            userdata: ::std::ptr::null_mut(),
+            flags: ConfigFlagBits::AsyncNoRealtime,
         }
     }
 
     /// Sets the speaker ID.
     pub fn speaker(&mut self, speaker: SpeakerID) -> &mut Self {
-        self.speaker = Some(speaker);
+        self.speaker = speaker;
         self
     }
 
     /// Sets the recognition result handler.
     pub fn handler(&mut self, handler: afi::AprilRecognitionResultHandler) -> &mut Self {
-        self.handler = Some(handler);
+        self.handler = handler;
         self
     }
 
     /// Sets the user-specific data.
     pub fn userdata(&mut self, userdata: *mut ::std::os::raw::c_void) -> &mut Self {
-        self.userdata = Some(userdata);
+        self.userdata = userdata;
         self
     }
 
     /// Sets the configuration flags.
     pub fn flags(&mut self, flags: ConfigFlagBits) -> &mut Self {
-        self.flags = Some(flags);
+        self.flags = flags;
         self
     }
 
     /// Builds the `Config` instance.
-    pub fn build(&self) -> Result<Config, Box<dyn std::error::Error>> {
-        let speaker = self.speaker.ok_or("Speaker ID not set")?;
-        let handler = self.handler.ok_or("Recognition result handler not set")?;
-        let userdata = self.userdata.ok_or("User-specific data not set")?;
-        let flags = self.flags.ok_or("Configuration flags not set")?;
-
-        Ok(Config {
-            speaker,
-            handler,
-            userdata,
-            flags,
-        })
+    pub fn build(&self) -> Config {
+        Config::new(self.speaker, self.handler, self.userdata, self.flags)
     }
 }
 
@@ -295,7 +272,7 @@ mod tests {
     #[test]
     fn test_config_builder() {
         // Test default configuration
-        let default_config = ConfigBuilder::new().build().unwrap();
+        let default_config = ConfigBuilder::new().build();
         let expected_default = Config {
             speaker: SpeakerID::default(),
             handler: None,
@@ -316,8 +293,7 @@ mod tests {
             .handler(Some(handler_cb_wrapper))
             .userdata(handler_callback as *mut std::os::raw::c_void)
             .flags(ConfigFlagBits::Zero)
-            .build()
-            .unwrap();
+            .build();
         let expected_custom = Config {
             speaker: SpeakerID { data: [42; 16] },
             handler: Some(handler_cb_wrapper),
@@ -330,7 +306,7 @@ mod tests {
         let mut config_builder = ConfigBuilder::new();
         config_builder.speaker(SpeakerID::default());
         config_builder.flags(ConfigFlagBits::AsyncRealtime);
-        let mut_config = config_builder.build().unwrap();
+        let mut_config = config_builder.build();
         let expected_mut = Config {
             speaker: SpeakerID::default(),
             handler: None,

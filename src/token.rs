@@ -91,10 +91,10 @@ impl From<afi::AprilTokenFlagBits> for TokenFlagBits {
 ///   representing the recognized text tokens.
 ///
 /// - `CantKeepUp`: If in non-synchronous mode, this may be called when the internal audio
-///   buffer is full and processing can't keep up. It will be called with count = 0, tokens = `None`.
+///   buffer is full and processing can't keep up. It will be called with count = 0, no tokens.
 ///
 /// - `Silence`: Specifies that there has been some silence. Will not be called repeatedly.
-///   It will be called with count = 0, tokens = `None`.
+///   It will be called with count = 0, no tokens.
 ///
 /// [`Token`]: enum.Token.html
 #[derive(Debug, Clone)]
@@ -104,20 +104,20 @@ pub enum ResultType {
 
     /// Specifies that the result is only partial, and a future call will
     /// contain much of the same text but updated.
-    RecognitionPartial(Option<Vec<Token>>),
+    RecognitionPartial(Vec<Token>),
 
     /// Specifies that the result is final. Future calls will start from
     /// empty and will not contain any of the given text.
-    RecognitionFinal(Option<Vec<Token>>),
+    RecognitionFinal(Vec<Token>),
 
     /// If in non-synchronous mode, this may be called when the internal
     /// audio buffer is full and processing can't keep up.
-    /// It will be called with count = 0, tokens = `None`.
+    /// It will be called with count = 0, no tokens.
     CantKeepUp,
 
     /// Specifies that there has been some silence. Will not be called
     /// repeatedly.
-    /// It will be called with count = 0, tokens = `None`.
+    /// It will be called with count = 0, no tokens.
     Silence,
 }
 
@@ -271,9 +271,9 @@ pub extern "C" fn handler_cb_wrapper(
                 let tokens_slice = unsafe { slice::from_raw_parts(tokens, count) };
                 let tokens_vec: Vec<Token> = tokens_slice.iter().map(|t| (*t).into()).collect();
                 if result_type == afi::AprilResultType_APRIL_RESULT_RECOGNITION_PARTIAL {
-                    ResultType::RecognitionPartial(Some(tokens_vec))
+                    ResultType::RecognitionPartial(tokens_vec)
                 } else {
-                    ResultType::RecognitionFinal(Some(tokens_vec))
+                    ResultType::RecognitionFinal(tokens_vec)
                 }
             }
             afi::AprilResultType_APRIL_RESULT_ERROR_CANT_KEEP_UP => ResultType::CantKeepUp,
@@ -342,8 +342,8 @@ mod tests {
 
     #[test]
     fn test_recognition_result_types() {
-        assert!(is_recognition_result(ResultType::RecognitionPartial(None)));
-        assert!(is_recognition_result(ResultType::RecognitionFinal(None)));
+        assert!(is_recognition_result(ResultType::RecognitionPartial(vec![])));
+        assert!(is_recognition_result(ResultType::RecognitionFinal(vec![])));
         assert!(!is_recognition_result(ResultType::Unknown));
         assert!(!is_recognition_result(ResultType::CantKeepUp));
         assert!(!is_recognition_result(ResultType::Silence));

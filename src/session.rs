@@ -96,7 +96,7 @@ impl<'a> Session<'a> {
         config_builder.handler(Some(handler_cb_wrapper));
         config_builder.speaker(SpeakerID::default()); // No speaker by default
 
-        let config = config_builder.build().unwrap();
+        let config = config_builder.build();
         let session = unsafe { afi::aas_create_session(model.ctx, config.into()) };
 
         if session.is_null() {
@@ -140,6 +140,21 @@ impl<'a> Session<'a> {
     ///
     /// Note: `short_count` in the `aas_feed_pcm16` call represents the number of shorts, not bytes.
     pub fn feed_pcm16(&self, pcm16_bytes: &[u8]) {
+        // On little-endian targets, try zero-copy reinterpret if aligned.
+        #[cfg(target_endian = "little")]
+        {
+            // SAFETY: align_to checks that the pointer is properly aligned for i16.
+            // The C library only reads from the pointer (never writes through it).
+            let (prefix, shorts, suffix) = unsafe { pcm16_bytes.align_to::<i16>() };
+            if prefix.is_empty() && suffix.len() < 2 {
+                unsafe {
+                    afi::aas_feed_pcm16(self.ctx, shorts.as_ptr() as *mut i16, shorts.len());
+                }
+                return;
+            }
+        }
+
+        // Fallback: convert bytes to i16 samples (handles big-endian or unaligned input).
         let mut audio_samples: Vec<i16> = pcm16_bytes
             .chunks_exact(2)
             .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]))

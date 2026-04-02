@@ -72,8 +72,8 @@ fn initialize() {
 fn example_handler(result_type: ResultType) {
     // dbg!(result_type.clone());
     let (prefix, tokens_str) = match result_type {
-        ResultType::RecognitionFinal(tokens) => ("@ ", tokens_to_string(tokens.unwrap())),
-        ResultType::RecognitionPartial(tokens) => ("- ", tokens_to_string(tokens.unwrap())),
+        ResultType::RecognitionFinal(tokens) => ("@ ", tokens_to_string(tokens)),
+        ResultType::RecognitionPartial(tokens) => ("- ", tokens_to_string(tokens)),
         ResultType::CantKeepUp | ResultType::Silence | ResultType::Unknown => (".", String::new()),
     };
 
